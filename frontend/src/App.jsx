@@ -46,8 +46,11 @@ const EMPTY_PLACE_DRAFT = {
   operating_hours: "",
   price_range: "To verify",
   description: "",
-  latitude: "",
-  longitude: "",
+};
+
+const UBELT_FALLBACK_LOCATION = {
+  latitude: 14.603056,
+  longitude: 120.985556,
 };
 
 function normalizeSearch(value) {
@@ -289,25 +292,17 @@ export default function App() {
     setShowAddPlacePanel(true);
   }, [session]);
 
-  const handleUseLocationForPlace = useCallback(() => {
-    if (!userLocation) return;
-    setPlaceDraft((current) => ({
-      ...current,
-      latitude: String(userLocation.latitude),
-      longitude: String(userLocation.longitude),
-    }));
-  }, [userLocation]);
-
   const handleSubmitPlace = useCallback(
     async (event) => {
       event.preventDefault();
       setPlaceStatus("saving");
 
       try {
+        const placeLocation = userLocation || UBELT_FALLBACK_LOCATION;
         const created = await createEstablishment({
           ...placeDraft,
-          latitude: Number(placeDraft.latitude),
-          longitude: Number(placeDraft.longitude),
+          latitude: placeLocation.latitude,
+          longitude: placeLocation.longitude,
         });
         const enhanced = enhanceEstablishment(created, establishments.length);
         setEstablishments((current) => sortForStudentMap([...current, enhanced]));
@@ -320,7 +315,7 @@ export default function App() {
         setPlaceStatus(placeError.message);
       }
     },
-    [establishments.length, placeDraft],
+    [establishments.length, placeDraft, userLocation],
   );
 
   const handleSubmitReview = useCallback(
@@ -460,9 +455,7 @@ export default function App() {
         <AddPlacePanel
           draft={placeDraft}
           status={placeStatus}
-          userLocation={userLocation}
           onDraftChange={setPlaceDraft}
-          onUseLocation={handleUseLocationForPlace}
           onSubmit={handleSubmitPlace}
           onClose={() => setShowAddPlacePanel(false)}
         />

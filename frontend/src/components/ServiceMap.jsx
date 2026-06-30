@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { useEffect } from "react";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
-import { Crosshair, Minus, Plus } from "lucide-react";
+import { Crosshair, Minus, Navigation, Plus } from "lucide-react";
 import { getDisplayRating } from "../data/serviceMetadata.js";
 import { getServiceIcon } from "./serviceIcons.jsx";
 
@@ -43,10 +43,47 @@ function MapFocus({ selectedEstablishment }) {
   return null;
 }
 
+function createUserIcon() {
+  const html = renderToStaticMarkup(
+    <div className="user-marker">
+      <Navigation size={20} strokeWidth={2.4} />
+    </div>,
+  );
+
+  return L.divIcon({
+    html,
+    className: "user-marker-shell",
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -16],
+  });
+}
+
+function MapControlButtons({ onLocateUser }) {
+  const map = useMap();
+
+  return (
+    <div className="map-controls">
+      <button type="button" aria-label="Zoom in" onClick={() => map.zoomIn()}>
+        <Plus size={20} />
+      </button>
+      <button type="button" aria-label="Zoom out" onClick={() => map.zoomOut()}>
+        <Minus size={20} />
+      </button>
+      <button type="button" aria-label="Use my location" onClick={onLocateUser}>
+        <Crosshair size={20} />
+      </button>
+    </div>
+  );
+}
+
 export default function ServiceMap({
   establishments,
   selectedStoreId,
   reviewsByStore,
+  userLocation,
+  locationStatus,
+  onLocateUser,
   onSelectStore,
 }) {
   const selectedEstablishment = establishments.find(
@@ -72,6 +109,14 @@ export default function ServiceMap({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <MapFocus selectedEstablishment={selectedEstablishment} />
+        {userLocation ? (
+          <Marker position={[userLocation.latitude, userLocation.longitude]} icon={createUserIcon()}>
+            <Popup>
+              <strong>Your location</strong>
+              <span>Used for directions and suggested places.</span>
+            </Popup>
+          </Marker>
+        ) : null}
         {establishments.map((establishment) => {
           const selected = establishment.store_id === selectedStoreId;
           const rating = getDisplayRating(establishment, reviewsByStore[establishment.store_id] || []);
@@ -93,19 +138,10 @@ export default function ServiceMap({
             </Marker>
           );
         })}
+        <MapControlButtons onLocateUser={onLocateUser} />
       </MapContainer>
 
-      <div className="map-controls" aria-hidden="true">
-        <button type="button">
-          <Plus size={20} />
-        </button>
-        <button type="button">
-          <Minus size={20} />
-        </button>
-        <button type="button">
-          <Crosshair size={20} />
-        </button>
-      </div>
+      {locationStatus ? <div className="map-location-status">{locationStatus}</div> : null}
       <div className="scale-bar" aria-hidden="true">
         <span />
         100 m

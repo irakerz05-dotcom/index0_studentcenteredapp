@@ -1,6 +1,13 @@
-import { Bookmark, ChevronDown, GraduationCap, UserRound } from "lucide-react";
+import { Bookmark, LogIn, LogOut, MapPinPlus, UserRound } from "lucide-react";
 
-export default function Header({ showingBookmarks, onToggleBookmarks }) {
+export default function Header({
+  user,
+  showingBookmarks,
+  onToggleBookmarks,
+  onAddPlace,
+  onLogin,
+  onLogout,
+}) {
   return (
     <header className="app-header">
       <div className="brand">
@@ -11,6 +18,10 @@ export default function Header({ showingBookmarks, onToggleBookmarks }) {
       </div>
 
       <div className="header-actions">
+        <button className="add-place-button" type="button" onClick={onAddPlace}>
+          <MapPinPlus size={18} />
+          <span>Add Service</span>
+        </button>
         <button
           className={`bookmark-filter ${showingBookmarks ? "is-active" : ""}`}
           type="button"
@@ -19,14 +30,21 @@ export default function Header({ showingBookmarks, onToggleBookmarks }) {
           <Bookmark size={18} />
           <span>My Bookmarks</span>
         </button>
-        <div className="profile-chip">
-          <UserRound size={18} />
-          <div>
-            <strong>John Doe</strong>
-            <span>Student</span>
-          </div>
-          <ChevronDown size={16} />
-        </div>
+        {user ? (
+          <button className="profile-chip" type="button" onClick={onLogout} title="Log out">
+            <UserRound size={18} />
+            <div>
+              <strong>{user.full_name}</strong>
+              <span>{user.role || "Student"}</span>
+            </div>
+            <LogOut size={16} />
+          </button>
+        ) : (
+          <button className="login-button" type="button" onClick={onLogin}>
+            <LogIn size={18} />
+            <span>Log In</span>
+          </button>
+        )}
       </div>
     </header>
   );

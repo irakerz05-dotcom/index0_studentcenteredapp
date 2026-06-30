@@ -17,6 +17,8 @@ export default function DetailPanel({
   isBookmarked,
   reviewDraft,
   reviewStatus,
+  userLocation,
+  isAuthenticated,
   onClose,
   onToggleBookmark,
   onReviewDraftChange,
@@ -35,7 +37,9 @@ export default function DetailPanel({
   }
 
   const rating = getDisplayRating(establishment, reviews);
-  const directionsUrl = `https://www.openstreetmap.org/directions?to=${establishment.latitude}%2C${establishment.longitude}`;
+  const directionsUrl = userLocation
+    ? `https://www.openstreetmap.org/directions?engine=fossgis_osrm_foot&route=${userLocation.latitude}%2C${userLocation.longitude}%3B${establishment.latitude}%2C${establishment.longitude}`
+    : `https://www.openstreetmap.org/directions?to=${establishment.latitude}%2C${establishment.longitude}`;
 
   return (
     <aside className="detail-panel" aria-label={`${establishment.name} details`}>
@@ -84,7 +88,7 @@ export default function DetailPanel({
         </p>
         <a className="text-action" href={directionsUrl} target="_blank" rel="noreferrer">
           <ExternalLink size={16} />
-          <span>Directions</span>
+          <span>{userLocation ? "Navigate from my location" : "Directions"}</span>
         </a>
       </section>
 
@@ -147,6 +151,7 @@ export default function DetailPanel({
 
         <form className="review-form" onSubmit={onSubmitReview}>
           <label htmlFor="review-text">Write a review</label>
+          {!isAuthenticated ? <p className="form-note">Log in to submit reviews and save bookmarks.</p> : null}
           <div className="rating-input" aria-label="Choose rating">
             {Array.from({ length: 5 }, (_, index) => {
               const score = index + 1;
@@ -172,7 +177,7 @@ export default function DetailPanel({
             placeholder="Share your experience..."
             rows={4}
           />
-          <button className="submit-review" type="submit" disabled={reviewStatus === "saving"}>
+          <button className="submit-review" type="submit" disabled={!isAuthenticated || reviewStatus === "saving"}>
             {reviewStatus === "saving" ? "Submitting..." : "Submit Review"}
           </button>
           {reviewStatus && reviewStatus !== "saving" ? <p className="form-status">{reviewStatus}</p> : null}

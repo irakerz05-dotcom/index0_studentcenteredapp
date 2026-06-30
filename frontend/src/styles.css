@@ -108,6 +108,7 @@ a {
 
 .bookmark-filter,
 .add-place-button,
+.stop-gps-button,
 .login-button,
 .profile-chip,
 .icon-button,
@@ -134,6 +135,7 @@ a {
 }
 
 .add-place-button,
+.stop-gps-button,
 .login-button {
   display: inline-flex;
   min-height: 40px;
@@ -147,6 +149,12 @@ a {
   font-size: 13px;
   font-weight: 750;
   padding: 0 14px;
+}
+
+.stop-gps-button {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: white;
 }
 
 .login-button {
@@ -642,6 +650,12 @@ a {
   background: white;
   color: #111827;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.map-controls button.stop-map-control {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: white;
 }
 
 .map-location-status {
@@ -1389,6 +1403,7 @@ a {
 
   .bookmark-filter span,
   .add-place-button span,
+  .stop-gps-button span,
   .login-button span,
   .profile-chip div,
   .profile-chip > svg + div + svg {
@@ -1396,6 +1411,7 @@ a {
   }
 
   .add-place-button,
+  .stop-gps-button,
   .login-button {
     width: 38px;
     min-height: 38px;

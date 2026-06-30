@@ -2,12 +2,23 @@ import os
 
 from dotenv import load_dotenv
 
-from config import DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER
-
 load_dotenv()
 
 
+def _db_config():
+    return {
+        "host": os.getenv("DB_HOST"),
+        "port": os.getenv("DB_PORT", "5432"),
+        "database": os.getenv("DB_NAME"),
+        "user": os.getenv("DB_USER"),
+        "password": os.getenv("DB_PASSWORD"),
+        "sslmode": os.getenv("DB_SSLMODE", "prefer"),
+    }
+
+
 def get_db_connection():
+    config = _db_config()
+
     try:
         import psycopg2
     except ModuleNotFoundError:
@@ -17,21 +28,21 @@ def get_db_connection():
             raise RuntimeError("Install psycopg[binary] to connect to PostgreSQL") from exc
 
         return psycopg.connect(
-            host=os.getenv("DB_HOST") or DB_HOST,
-            port=os.getenv("DB_PORT") or DB_PORT,
-            dbname=os.getenv("DB_NAME") or DB_NAME,
-            user=os.getenv("DB_USER") or DB_USER,
-            password=os.getenv("DB_PASSWORD") or DB_PASSWORD,
-            sslmode=os.getenv("DB_SSLMODE", "prefer"),
+            host=config["host"],
+            port=config["port"],
+            dbname=config["database"],
+            user=config["user"],
+            password=config["password"],
+            sslmode=config["sslmode"],
         )
 
     connection = psycopg2.connect(
-        host=os.getenv("DB_HOST") or DB_HOST,
-        port=os.getenv("DB_PORT") or DB_PORT,
-        database=os.getenv("DB_NAME") or DB_NAME,
-        user=os.getenv("DB_USER") or DB_USER,
-        password=os.getenv("DB_PASSWORD") or DB_PASSWORD,
-        sslmode=os.getenv("DB_SSLMODE", "prefer"),
+        host=config["host"],
+        port=config["port"],
+        database=config["database"],
+        user=config["user"],
+        password=config["password"],
+        sslmode=config["sslmode"],
     )
     return connection
 

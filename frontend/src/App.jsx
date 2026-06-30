@@ -54,7 +54,30 @@ const EMPTY_PLACE_DRAFT = {
 };
 
 function normalizeSearch(value) {
-  return value.trim().toLowerCase();
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function getSearchTerms(value) {
+  const normalizedValue = normalizeSearch(value);
+  return normalizedValue ? normalizedValue.split(" ") : [];
+}
+
+function getSearchHaystack(establishment) {
+  return [
+    establishment.name,
+    establishment.type,
+    establishment.displayCategory,
+    establishment.address,
+    establishment.contact_number,
+    establishment.operating_hours,
+    establishment.price_range,
+    establishment.availability_status,
+    establishment.description,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+    .replace(/\s+/g, " ");
 }
 
 function getLocationFromPosition(position) {
@@ -172,7 +195,7 @@ export default function App() {
   }, [selectedStoreId]);
 
   const filteredEstablishments = useMemo(() => {
-    const query = normalizeSearch(searchTerm);
+    const searchTerms = getSearchTerms(searchTerm);
 
     return establishments
       .filter((establishment) => matchesCategory(establishment, selectedCategory))
@@ -185,29 +208,30 @@ export default function App() {
         return establishment.availability_status !== "Busy";
       })
       .filter((establishment) => {
-        if (!query) return true;
-        const haystack = [
-          establishment.name,
-          establishment.type,
-          establishment.displayCategory,
-          establishment.address,
-          establishment.description,
-        ]
-          .join(" ")
-          .toLowerCase();
+        if (searchTerms.length === 0) return true;
+        const haystack = getSearchHaystack(establishment);
 
-        return haystack.includes(query);
+        return searchTerms.every((term) => haystack.includes(term));
       });
   }, [bookmarks, establishments, openOnly, searchTerm, selectedCategory, showingBookmarks]);
+
+  useEffect(() => {
+    if (filteredEstablishments.length === 0) return;
+
+    setSelectedStoreId((currentId) =>
+      filteredEstablishments.some((establishment) => establishment.store_id === currentId)
+        ? currentId
+        : filteredEstablishments[0].store_id,
+    );
+  }, [filteredEstablishments]);
 
   const selectedEstablishment = useMemo(() => {
     return (
       filteredEstablishments.find((establishment) => establishment.store_id === selectedStoreId) ||
       filteredEstablishments[0] ||
-      establishments.find((establishment) => establishment.store_id === selectedStoreId) ||
       null
     );
-  }, [establishments, filteredEstablishments, selectedStoreId]);
+  }, [filteredEstablishments, selectedStoreId]);
 
   const handleSelectStore = useCallback((storeId) => {
     if (navigationWatchRef.current !== null) {
@@ -481,9 +505,11 @@ export default function App() {
     <div className="app-shell">
       <Header
         user={session?.user}
+        isNavigating={isNavigating}
         showingBookmarks={showingBookmarks}
         onToggleBookmarks={() => setShowingBookmarks((value) => !value)}
         onAddPlace={handleOpenAddPlace}
+        onStopNavigation={handleStopNavigation}
         onLogin={() => {
           setAuthMode("login");
           setAuthStatus("");
@@ -514,7 +540,7 @@ export default function App() {
         />
 
         <ServiceMap
-          establishments={filteredEstablishments.length > 0 ? filteredEstablishments : establishments}
+          establishments={filteredEstablishments}
           selectedStoreId={selectedEstablishment?.store_id ?? selectedStoreId}
           reviewsByStore={reviewsByStore}
           userLocation={userLocation}

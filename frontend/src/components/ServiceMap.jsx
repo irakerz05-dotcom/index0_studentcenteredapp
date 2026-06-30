@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { useEffect } from "react";
 import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
-import { Crosshair, Minus, Navigation, Plus, Route, X } from "lucide-react";
+import { Crosshair, Minus, Navigation, Plus, Route, Square, X } from "lucide-react";
 import { toLatLng, UBELT_CENTER, UBELT_LEAFLET_BOUNDS } from "../data/mapConfig.js";
 import { getDisplayRating } from "../data/serviceMetadata.js";
 import { getServiceIcon } from "./serviceIcons.jsx";
@@ -94,7 +94,7 @@ function createUserIcon() {
   });
 }
 
-function MapControlButtons({ onLocateUser }) {
+function MapControlButtons({ isNavigating, onLocateUser, onStopNavigation }) {
   const map = useMap();
 
   return (
@@ -108,6 +108,16 @@ function MapControlButtons({ onLocateUser }) {
       <button type="button" aria-label="Use my location" onClick={onLocateUser}>
         <Crosshair size={20} />
       </button>
+      {isNavigating && onStopNavigation ? (
+        <button
+          className="stop-map-control"
+          type="button"
+          aria-label="Stop GPS navigation"
+          onClick={onStopNavigation}
+        >
+          <Square size={17} fill="currentColor" />
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -232,7 +242,11 @@ export default function ServiceMap({
             </Marker>
           );
         })}
-        <MapControlButtons onLocateUser={onLocateUser} />
+        <MapControlButtons
+          isNavigating={isNavigating}
+          onLocateUser={onLocateUser}
+          onStopNavigation={onStopNavigation}
+        />
       </MapContainer>
 
       {locationStatus ? <div className="map-location-status">{locationStatus}</div> : null}

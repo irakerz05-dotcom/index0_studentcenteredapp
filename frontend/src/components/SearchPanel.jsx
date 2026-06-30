@@ -126,7 +126,7 @@ export default function SearchPanel({
                 <span className="result-content">
                   <span className="result-title-row">
                     <strong>{establishment.name}</strong>
-                    <span>{establishment.distance}</span>
+                    <span className="result-distance">{establishment.distance}</span>
                   </span>
                   <span className="result-facts">
                     <Star className="star-fill" size={15} />

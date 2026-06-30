@@ -24,6 +24,42 @@ export const CATEGORY_DEFINITIONS = [
     backendType: "Dormitory",
     keywords: ["dorm", "housing", "supply", "residence", "student dorm"],
   },
+  {
+    id: "Office",
+    label: "Office",
+    backendType: "Office",
+    keywords: ["office", "registrar", "records", "admin", "administration"],
+  },
+  {
+    id: "Clinic",
+    label: "Clinic",
+    backendType: "Clinic",
+    keywords: ["clinic", "health", "medical", "nurse", "doctor"],
+  },
+  {
+    id: "Library",
+    label: "Library",
+    backendType: "Library",
+    keywords: ["library", "books", "research", "reading"],
+  },
+  {
+    id: "Cashier",
+    label: "Cashier",
+    backendType: "Cashier",
+    keywords: ["cashier", "payment", "tuition", "billing", "finance"],
+  },
+  {
+    id: "Guidance",
+    label: "Guidance",
+    backendType: "Guidance",
+    keywords: ["guidance", "counseling", "counselling", "mental health", "adviser"],
+  },
+  {
+    id: "Admissions",
+    label: "Admissions",
+    backendType: "Admissions",
+    keywords: ["admission", "admissions", "enrollment", "enrolment", "applicant"],
+  },
 ];
 
 export const CATEGORY_COLORS = {
@@ -32,6 +68,12 @@ export const CATEGORY_COLORS = {
   "Study Hub": "#2f6fd6",
   Dormitory: "#7a56d8",
   Cafe: "#f47b20",
+  Office: "#0f766e",
+  Clinic: "#dc2626",
+  Library: "#2563eb",
+  Cashier: "#16a34a",
+  Guidance: "#9333ea",
+  Admissions: "#ea580c",
   Other: "#64748b",
 };
 
@@ -84,6 +126,12 @@ const DISPLAY_ORDER = {
   "Study Hub": 3,
   Dormitory: 4,
   Cafe: 5,
+  Office: 6,
+  Clinic: 7,
+  Library: 8,
+  Cashier: 9,
+  Guidance: 10,
+  Admissions: 11,
 };
 
 const FALLBACK_COORDINATES = [

@@ -357,6 +357,7 @@ a {
   display: grid;
   min-height: 0;
   gap: 8px;
+  overflow-x: hidden;
   overflow-y: auto;
   padding-right: 2px;
 }
@@ -413,17 +414,19 @@ a {
 .result-content {
   display: grid;
   min-width: 0;
+  overflow: hidden;
   gap: 5px;
 }
 
 .result-title-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
-  justify-content: space-between;
   gap: 10px;
 }
 
 .result-title-row strong {
+  min-width: 0;
   overflow: hidden;
   color: #111827;
   font-size: 18px;
@@ -433,9 +436,11 @@ a {
   white-space: nowrap;
 }
 
-.result-title-row span {
+.result-distance {
   color: #475467;
-  font-size: 13px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
   white-space: nowrap;
 }
 
@@ -722,6 +727,35 @@ a {
 .route-summary strong {
   color: var(--accent-strong);
   font-size: 18px;
+}
+
+.next-step {
+  display: grid;
+  gap: 3px;
+  border: 1px solid rgba(0, 124, 114, 0.18);
+  border-radius: 8px;
+  background: var(--accent-soft);
+  margin-top: 11px;
+  padding: 10px;
+}
+
+.next-step span {
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.next-step strong {
+  color: #111827;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.next-step small {
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .route-steps {
@@ -1466,7 +1500,7 @@ a {
 
   .result-facts,
   .result-status,
-  .result-title-row span {
+  .result-distance {
     font-size: 11px;
   }
 

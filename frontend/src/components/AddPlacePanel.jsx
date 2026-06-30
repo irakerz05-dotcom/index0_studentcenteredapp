@@ -1,4 +1,4 @@
-import { Crosshair, MapPin, X } from "lucide-react";
+import { MapPin, X } from "lucide-react";
 import { CATEGORY_DEFINITIONS } from "../data/serviceMetadata.js";
 
 const CATEGORIES = CATEGORY_DEFINITIONS.filter((category) => category.id !== "All");
@@ -6,9 +6,7 @@ const CATEGORIES = CATEGORY_DEFINITIONS.filter((category) => category.id !== "Al
 export default function AddPlacePanel({
   draft,
   status,
-  userLocation,
   onDraftChange,
-  onUseLocation,
   onSubmit,
   onClose,
 }) {
@@ -59,31 +57,6 @@ export default function AddPlacePanel({
               required
             />
           </label>
-
-          <div className="coordinate-grid">
-            <label>
-              <span>Latitude</span>
-              <input
-                value={draft.latitude}
-                onChange={(event) => onDraftChange({ ...draft, latitude: event.target.value })}
-                placeholder="14.6049"
-                required
-              />
-            </label>
-            <label>
-              <span>Longitude</span>
-              <input
-                value={draft.longitude}
-                onChange={(event) => onDraftChange({ ...draft, longitude: event.target.value })}
-                placeholder="120.9870"
-                required
-              />
-            </label>
-          </div>
-          <button className="secondary-action" type="button" onClick={onUseLocation} disabled={!userLocation}>
-            <Crosshair size={16} />
-            <span>{userLocation ? "Use My GPS Location" : "GPS location not available"}</span>
-          </button>
 
           <label>
             <span>Contact number</span>

@@ -2390,3 +2390,19 @@ body {
     background-position: -200% 0;
   }
 }
+
+.detail-panel {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 860px) {
+  .mobile-detail .detail-panel {
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-bottom: 88px;
+  }
+}

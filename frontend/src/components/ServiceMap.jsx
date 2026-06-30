@@ -27,22 +27,28 @@ function createMarkerIcon(establishment, selected) {
   });
 }
 
-function MapFocus({ selectedEstablishment }) {
+function MapFocus({ selectedEstablishment, navigationRoute }) {
   const map = useMap();
 
   useEffect(() => {
-    if (selectedEstablishment) {
-      map.flyTo([selectedEstablishment.latitude, selectedEstablishment.longitude], 17, {
-        animate: true,
-        duration: 0.6,
-      });
-    }
-  }, [map, selectedEstablishment]);
+    if (!selectedEstablishment || navigationRoute?.coordinates?.length) return;
+
+    map.flyTo([selectedEstablishment.latitude, selectedEstablishment.longitude], 18, {
+      animate: true,
+      duration: 0.65,
+    });
+  }, [
+    map,
+    navigationRoute,
+    selectedEstablishment?.latitude,
+    selectedEstablishment?.longitude,
+    selectedEstablishment?.store_id,
+  ]);
 
   return null;
 }
 
-function RouteFocus({ route }) {
+function RouteFocus({ route, isNavigating }) {
   const map = useMap();
 
   useEffect(() => {
@@ -50,9 +56,24 @@ function RouteFocus({ route }) {
     map.fitBounds(route.coordinates, {
       animate: true,
       duration: 0.5,
-      padding: [42, 42],
+      padding: isNavigating ? [72, 72] : [42, 42],
     });
-  }, [map, route]);
+  }, [isNavigating, map, route]);
+
+  return null;
+}
+
+function UserFollow({ isNavigating, userLocation }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!isNavigating || !userLocation) return;
+
+    map.flyTo([userLocation.latitude, userLocation.longitude], Math.max(map.getZoom(), 18), {
+      animate: true,
+      duration: 0.45,
+    });
+  }, [isNavigating, map, userLocation?.latitude, userLocation?.longitude]);
 
   return null;
 }
@@ -93,6 +114,7 @@ function MapControlButtons({ onLocateUser }) {
 
 function NavigationPanel({ route, status, onStopNavigation }) {
   if (!route && !status) return null;
+  const nextStep = route?.steps?.find((step) => step.instruction !== "Start walking") || route?.steps?.[0];
 
   return (
     <div className="navigation-panel" aria-live="polite">
@@ -114,6 +136,13 @@ function NavigationPanel({ route, status, onStopNavigation }) {
             <strong>{route.distanceText}</strong>
             <span>{route.durationText}</span>
           </p>
+          {nextStep ? (
+            <div className="next-step">
+              <span>Next</span>
+              <strong>{nextStep.instruction}</strong>
+              {nextStep.distance ? <small>{nextStep.distance}</small> : null}
+            </div>
+          ) : null}
           <ol className="route-steps">
             {route.steps.slice(0, 5).map((step) => (
               <li key={step.id}>
@@ -136,6 +165,7 @@ export default function ServiceMap({
   locationStatus,
   navigationRoute,
   navigationStatus,
+  isNavigating,
   onLocateUser,
   onStopNavigation,
   onSelectStore,
@@ -164,8 +194,9 @@ export default function ServiceMap({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <MapFocus selectedEstablishment={selectedEstablishment} />
-        <RouteFocus route={navigationRoute} />
+        <MapFocus selectedEstablishment={selectedEstablishment} navigationRoute={navigationRoute} />
+        <RouteFocus route={navigationRoute} isNavigating={isNavigating} />
+        <UserFollow isNavigating={isNavigating} userLocation={userLocation} />
         {navigationRoute?.coordinates?.length ? (
           <Polyline
             positions={navigationRoute.coordinates}

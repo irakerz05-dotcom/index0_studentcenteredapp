@@ -22,6 +22,7 @@ def get_db_connection():
             dbname=os.getenv("DB_NAME") or DB_NAME,
             user=os.getenv("DB_USER") or DB_USER,
             password=os.getenv("DB_PASSWORD") or DB_PASSWORD,
+            sslmode=os.getenv("DB_SSLMODE", "prefer"),
         )
 
     connection = psycopg2.connect(
@@ -30,6 +31,7 @@ def get_db_connection():
         database=os.getenv("DB_NAME") or DB_NAME,
         user=os.getenv("DB_USER") or DB_USER,
         password=os.getenv("DB_PASSWORD") or DB_PASSWORD,
+        sslmode=os.getenv("DB_SSLMODE", "prefer"),
     )
     return connection
 

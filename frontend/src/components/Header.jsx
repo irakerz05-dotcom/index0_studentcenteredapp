@@ -1,4 +1,4 @@
-import { Bookmark, LogIn, LogOut, MapPinPlus, UserRound } from "lucide-react";
+import { Bookmark, GraduationCap, LogIn, LogOut, MapPinPlus, UserRound } from "lucide-react";
 
 export default function Header({
   user,

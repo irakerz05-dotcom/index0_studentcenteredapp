@@ -4,13 +4,20 @@ import SearchPanel from "./components/SearchPanel.jsx";
 import ServiceMap from "./components/ServiceMap.jsx";
 import DetailPanel from "./components/DetailPanel.jsx";
 import MobileTabs from "./components/MobileTabs.jsx";
+import AuthPanel from "./components/AuthPanel.jsx";
+import AddPlacePanel from "./components/AddPlacePanel.jsx";
 import {
+  clearSession,
   createBookmark,
+  createEstablishment,
   createReview,
   deleteBookmark,
+  getSavedSession,
   getBookmarks,
   getEstablishments,
   getReviews,
+  login,
+  signup,
 } from "./services/api.js";
 import {
   enhanceEstablishment,
@@ -24,11 +31,31 @@ const EMPTY_REVIEW = {
   reviewText: "",
 };
 
+const EMPTY_AUTH_DRAFT = {
+  fullName: "",
+  email: "",
+  password: "",
+  school: "",
+};
+
+const EMPTY_PLACE_DRAFT = {
+  name: "",
+  type: "Printing & Binding",
+  address: "",
+  contact_number: "",
+  operating_hours: "",
+  price_range: "To verify",
+  description: "",
+  latitude: "",
+  longitude: "",
+};
+
 function normalizeSearch(value) {
   return value.trim().toLowerCase();
 }
 
 export default function App() {
+  const [session, setSession] = useState(() => getSavedSession());
   const [establishments, setEstablishments] = useState([]);
   const [selectedStoreId, setSelectedStoreId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -39,6 +66,15 @@ export default function App() {
   const [reviewsByStore, setReviewsByStore] = useState({});
   const [reviewDraft, setReviewDraft] = useState(EMPTY_REVIEW);
   const [reviewStatus, setReviewStatus] = useState("");
+  const [authMode, setAuthMode] = useState("login");
+  const [authDraft, setAuthDraft] = useState(EMPTY_AUTH_DRAFT);
+  const [authStatus, setAuthStatus] = useState("");
+  const [showAuthPanel, setShowAuthPanel] = useState(false);
+  const [showAddPlacePanel, setShowAddPlacePanel] = useState(false);
+  const [placeDraft, setPlaceDraft] = useState(EMPTY_PLACE_DRAFT);
+  const [placeStatus, setPlaceStatus] = useState("");
+  const [userLocation, setUserLocation] = useState(null);
+  const [locationStatus, setLocationStatus] = useState("");
   const [mobileView, setMobileView] = useState("map");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -99,10 +135,15 @@ export default function App() {
   }, [loadEstablishments]);
 
   useEffect(() => {
+    if (!session?.token) {
+      setBookmarks(new Set());
+      return;
+    }
+
     getBookmarks()
       .then((rows) => setBookmarks(new Set(rows.map((row) => row.store_id))))
       .catch(() => setBookmarks(new Set()));
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     setReviewDraft(EMPTY_REVIEW);
@@ -154,6 +195,13 @@ export default function App() {
 
   const handleToggleBookmark = useCallback(
     async (storeId) => {
+      if (!session?.token) {
+        setAuthMode("login");
+        setShowAuthPanel(true);
+        setReviewStatus("Log in to save bookmarks.");
+        return;
+      }
+
       const isBookmarked = bookmarks.has(storeId);
       const nextBookmarks = new Set(bookmarks);
 
@@ -176,12 +224,115 @@ export default function App() {
         setReviewStatus(bookmarkError.message);
       }
     },
-    [bookmarks],
+    [bookmarks, session],
+  );
+
+  const handleAuthSubmit = useCallback(
+    async (event) => {
+      event.preventDefault();
+      setAuthStatus("saving");
+
+      try {
+        const nextSession =
+          authMode === "signup"
+            ? await signup(authDraft)
+            : await login({ email: authDraft.email, password: authDraft.password });
+        setSession(nextSession);
+        setAuthDraft(EMPTY_AUTH_DRAFT);
+        setAuthStatus("");
+        setShowAuthPanel(false);
+      } catch (authError) {
+        setAuthStatus(authError.message);
+      }
+    },
+    [authDraft, authMode],
+  );
+
+  const handleLogout = useCallback(() => {
+    clearSession();
+    setSession(null);
+    setBookmarks(new Set());
+    setShowingBookmarks(false);
+  }, []);
+
+  const handleLocateUser = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationStatus("GPS is not available in this browser.");
+      return;
+    }
+
+    setLocationStatus("Finding your location...");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          latitude: Number(position.coords.latitude.toFixed(7)),
+          longitude: Number(position.coords.longitude.toFixed(7)),
+        });
+        setLocationStatus("Location ready.");
+      },
+      () => {
+        setLocationStatus("Allow location access to use GPS navigation.");
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 },
+    );
+  }, []);
+
+  const handleOpenAddPlace = useCallback(() => {
+    if (!session?.token) {
+      setAuthMode("signup");
+      setShowAuthPanel(true);
+      setAuthStatus("Create an account or log in before adding a service.");
+      return;
+    }
+
+    setPlaceStatus("");
+    setShowAddPlacePanel(true);
+  }, [session]);
+
+  const handleUseLocationForPlace = useCallback(() => {
+    if (!userLocation) return;
+    setPlaceDraft((current) => ({
+      ...current,
+      latitude: String(userLocation.latitude),
+      longitude: String(userLocation.longitude),
+    }));
+  }, [userLocation]);
+
+  const handleSubmitPlace = useCallback(
+    async (event) => {
+      event.preventDefault();
+      setPlaceStatus("saving");
+
+      try {
+        const created = await createEstablishment({
+          ...placeDraft,
+          latitude: Number(placeDraft.latitude),
+          longitude: Number(placeDraft.longitude),
+        });
+        const enhanced = enhanceEstablishment(created, establishments.length);
+        setEstablishments((current) => sortForStudentMap([...current, enhanced]));
+        setSelectedStoreId(created.store_id);
+        setPlaceDraft(EMPTY_PLACE_DRAFT);
+        setShowAddPlacePanel(false);
+        setMobileView("detail");
+        setPlaceStatus("");
+      } catch (placeError) {
+        setPlaceStatus(placeError.message);
+      }
+    },
+    [establishments.length, placeDraft],
   );
 
   const handleSubmitReview = useCallback(
     async (event) => {
       event.preventDefault();
+
+      if (!session?.token) {
+        setAuthMode("login");
+        setShowAuthPanel(true);
+        setReviewStatus("Log in to submit a review.");
+        return;
+      }
 
       if (!selectedEstablishment) {
         return;
@@ -211,7 +362,7 @@ export default function App() {
         setReviewStatus(reviewError.message);
       }
     },
-    [reviewDraft, selectedEstablishment],
+    [reviewDraft, selectedEstablishment, session],
   );
 
   const handleBookmarkView = useCallback(() => {
@@ -226,8 +377,16 @@ export default function App() {
   return (
     <div className="app-shell">
       <Header
+        user={session?.user}
         showingBookmarks={showingBookmarks}
         onToggleBookmarks={() => setShowingBookmarks((value) => !value)}
+        onAddPlace={handleOpenAddPlace}
+        onLogin={() => {
+          setAuthMode("login");
+          setAuthStatus("");
+          setShowAuthPanel(true);
+        }}
+        onLogout={handleLogout}
       />
 
       <main className={`app-main mobile-${mobileView}`}>
@@ -255,6 +414,9 @@ export default function App() {
           establishments={filteredEstablishments.length > 0 ? filteredEstablishments : establishments}
           selectedStoreId={selectedEstablishment?.store_id ?? selectedStoreId}
           reviewsByStore={reviewsByStore}
+          userLocation={userLocation}
+          locationStatus={locationStatus}
+          onLocateUser={handleLocateUser}
           onSelectStore={handleSelectStore}
         />
 
@@ -264,6 +426,8 @@ export default function App() {
           isBookmarked={selectedEstablishment ? bookmarks.has(selectedEstablishment.store_id) : false}
           reviewDraft={reviewDraft}
           reviewStatus={reviewStatus}
+          userLocation={userLocation}
+          isAuthenticated={Boolean(session?.token)}
           onClose={() => setMobileView("map")}
           onToggleBookmark={handleToggleBookmark}
           onReviewDraftChange={setReviewDraft}
@@ -276,6 +440,33 @@ export default function App() {
         onViewChange={setMobileView}
         onBookmarksView={handleBookmarkView}
       />
+
+      {showAuthPanel ? (
+        <AuthPanel
+          mode={authMode}
+          draft={authDraft}
+          status={authStatus}
+          onModeChange={(mode) => {
+            setAuthMode(mode);
+            setAuthStatus("");
+          }}
+          onDraftChange={setAuthDraft}
+          onSubmit={handleAuthSubmit}
+          onClose={() => setShowAuthPanel(false)}
+        />
+      ) : null}
+
+      {showAddPlacePanel ? (
+        <AddPlacePanel
+          draft={placeDraft}
+          status={placeStatus}
+          userLocation={userLocation}
+          onDraftChange={setPlaceDraft}
+          onUseLocation={handleUseLocationForPlace}
+          onSubmit={handleSubmitPlace}
+          onClose={() => setShowAddPlacePanel(false)}
+        />
+      ) : null}
     </div>
   );
 }

@@ -210,6 +210,13 @@ export default function App() {
   }, [establishments, filteredEstablishments, selectedStoreId]);
 
   const handleSelectStore = useCallback((storeId) => {
+    if (navigationWatchRef.current !== null) {
+      navigator.geolocation.clearWatch(navigationWatchRef.current);
+      navigationWatchRef.current = null;
+    }
+    setIsNavigating(false);
+    setNavigationRoute(null);
+    setNavigationStatus("");
     setSelectedStoreId(storeId);
     setMobileView("detail");
   }, []);
@@ -514,6 +521,7 @@ export default function App() {
           locationStatus={locationStatus}
           navigationRoute={navigationRoute}
           navigationStatus={navigationStatus}
+          isNavigating={isNavigating}
           onLocateUser={handleLocateUser}
           onStopNavigation={isNavigating ? handleStopNavigation : undefined}
           onSelectStore={handleSelectStore}

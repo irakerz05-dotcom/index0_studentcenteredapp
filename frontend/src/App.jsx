@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Header from "./components/Header.jsx";
+import HeroPanel from "./components/HeroPanel.jsx";
 import SearchPanel from "./components/SearchPanel.jsx";
 import ServiceMap from "./components/ServiceMap.jsx";
 import DetailPanel from "./components/DetailPanel.jsx";
@@ -53,6 +54,21 @@ const EMPTY_PLACE_DRAFT = {
   description: "",
 };
 
+const RECENTLY_VIEWED_KEY = "index0_recent_services";
+
+function readRecentlyViewed() {
+  try {
+    const value = JSON.parse(localStorage.getItem(RECENTLY_VIEWED_KEY));
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentlyViewed(storeIds) {
+  localStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(storeIds));
+}
+
 function normalizeSearch(value) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
@@ -67,11 +83,16 @@ function getSearchHaystack(establishment) {
     establishment.name,
     establishment.type,
     establishment.displayCategory,
+    establishment.building,
+    establishment.building_name,
     establishment.address,
     establishment.contact_number,
+    establishment.email,
     establishment.operating_hours,
     establishment.price_range,
     establishment.availability_status,
+    establishment.services,
+    establishment.keywords,
     establishment.description,
   ]
     .filter(Boolean)
@@ -102,6 +123,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [openOnly, setOpenOnly] = useState(false);
   const [showingBookmarks, setShowingBookmarks] = useState(false);
+  const [recentStoreIds, setRecentStoreIds] = useState(() => readRecentlyViewed());
   const [bookmarks, setBookmarks] = useState(() => new Set());
   const [reviewsByStore, setReviewsByStore] = useState({});
   const [reviewDraft, setReviewDraft] = useState(EMPTY_REVIEW);
@@ -215,6 +237,34 @@ export default function App() {
       });
   }, [bookmarks, establishments, openOnly, searchTerm, selectedCategory, showingBookmarks]);
 
+  const searchSuggestions = useMemo(() => {
+    const searchTerms = getSearchTerms(searchTerm);
+
+    if (searchTerms.length === 0) {
+      return [];
+    }
+
+    return establishments
+      .filter((establishment) => {
+        const haystack = getSearchHaystack(establishment);
+        return searchTerms.every((term) => haystack.includes(term));
+      })
+      .slice(0, 6);
+  }, [establishments, searchTerm]);
+
+  const serviceStats = useMemo(() => {
+    const categoryCount = new Set(establishments.map((establishment) => establishment.displayCategory)).size;
+    const openServices = establishments.filter(
+      (establishment) => establishment.availability_status !== "Busy",
+    ).length;
+
+    return {
+      totalServices: establishments.length,
+      openServices,
+      categories: categoryCount,
+    };
+  }, [establishments]);
+
   useEffect(() => {
     if (filteredEstablishments.length === 0) return;
 
@@ -242,8 +292,21 @@ export default function App() {
     setNavigationRoute(null);
     setNavigationStatus("");
     setSelectedStoreId(storeId);
+    setRecentStoreIds((currentIds) => {
+      const nextIds = [storeId, ...currentIds.filter((currentId) => currentId !== storeId)].slice(0, 5);
+      saveRecentlyViewed(nextIds);
+      return nextIds;
+    });
     setMobileView("detail");
   }, []);
+
+  const handleSuggestionSelect = useCallback(
+    (establishment) => {
+      setSearchTerm(establishment.name);
+      handleSelectStore(establishment.store_id);
+    },
+    [handleSelectStore],
+  );
 
   const handleToggleBookmark = useCallback(
     async (storeId) => {
@@ -519,57 +582,73 @@ export default function App() {
       />
 
       <main className={`app-main mobile-${mobileView}`}>
-        <SearchPanel
-          establishments={filteredEstablishments}
-          selectedStoreId={selectedEstablishment?.store_id ?? selectedStoreId}
+        <HeroPanel
           searchTerm={searchTerm}
-          selectedCategory={selectedCategory}
-          openOnly={openOnly}
-          showingBookmarks={showingBookmarks}
-          bookmarks={bookmarks}
-          reviewsByStore={reviewsByStore}
-          isLoading={isLoading}
-          error={error}
+          suggestions={searchSuggestions}
+          stats={serviceStats}
           onSearchChange={setSearchTerm}
-          onCategoryChange={(category) => {
-            setSelectedCategory(category);
-            setShowingBookmarks(false);
-          }}
-          onOpenOnlyChange={() => setOpenOnly((value) => !value)}
-          onSelectStore={handleSelectStore}
+          onSuggestionSelect={handleSuggestionSelect}
+          onExplore={() => setMobileView("list")}
+          onViewMap={() => setMobileView("map")}
         />
 
-        <ServiceMap
-          establishments={filteredEstablishments}
-          selectedStoreId={selectedEstablishment?.store_id ?? selectedStoreId}
-          reviewsByStore={reviewsByStore}
-          userLocation={userLocation}
-          locationStatus={locationStatus}
-          navigationRoute={navigationRoute}
-          navigationStatus={navigationStatus}
-          isNavigating={isNavigating}
-          onLocateUser={handleLocateUser}
-          onStopNavigation={isNavigating ? handleStopNavigation : undefined}
-          onSelectStore={handleSelectStore}
-        />
+        <section className="workspace-grid" aria-label="Index 0 Student Map workspace">
+          <SearchPanel
+            establishments={filteredEstablishments}
+            allEstablishments={establishments}
+            selectedStoreId={selectedEstablishment?.store_id ?? selectedStoreId}
+            searchTerm={searchTerm}
+            suggestions={searchSuggestions}
+            selectedCategory={selectedCategory}
+            openOnly={openOnly}
+            showingBookmarks={showingBookmarks}
+            bookmarks={bookmarks}
+            reviewsByStore={reviewsByStore}
+            recentStoreIds={recentStoreIds}
+            isLoading={isLoading}
+            error={error}
+            onSearchChange={setSearchTerm}
+            onSuggestionSelect={handleSuggestionSelect}
+            onCategoryChange={(category) => {
+              setSelectedCategory(category);
+              setShowingBookmarks(false);
+            }}
+            onOpenOnlyChange={() => setOpenOnly((value) => !value)}
+            onSelectStore={handleSelectStore}
+          />
 
-        <DetailPanel
-          establishment={selectedEstablishment}
-          reviews={detailReviews}
-          isBookmarked={selectedEstablishment ? bookmarks.has(selectedEstablishment.store_id) : false}
-          reviewDraft={reviewDraft}
-          reviewStatus={reviewStatus}
-          userLocation={userLocation}
-          isAuthenticated={Boolean(session?.token)}
-          isNavigating={isNavigating}
-          navigationStatus={navigationStatus}
-          onClose={() => setMobileView("map")}
-          onToggleBookmark={handleToggleBookmark}
-          onStartNavigation={handleStartNavigation}
-          onStopNavigation={handleStopNavigation}
-          onReviewDraftChange={setReviewDraft}
-          onSubmitReview={handleSubmitReview}
-        />
+          <ServiceMap
+            establishments={filteredEstablishments}
+            selectedStoreId={selectedEstablishment?.store_id ?? selectedStoreId}
+            reviewsByStore={reviewsByStore}
+            userLocation={userLocation}
+            locationStatus={locationStatus}
+            navigationRoute={navigationRoute}
+            navigationStatus={navigationStatus}
+            isNavigating={isNavigating}
+            onLocateUser={handleLocateUser}
+            onStopNavigation={isNavigating ? handleStopNavigation : undefined}
+            onSelectStore={handleSelectStore}
+          />
+
+          <DetailPanel
+            establishment={selectedEstablishment}
+            reviews={detailReviews}
+            isBookmarked={selectedEstablishment ? bookmarks.has(selectedEstablishment.store_id) : false}
+            reviewDraft={reviewDraft}
+            reviewStatus={reviewStatus}
+            userLocation={userLocation}
+            isAuthenticated={Boolean(session?.token)}
+            isNavigating={isNavigating}
+            navigationStatus={navigationStatus}
+            onClose={() => setMobileView("map")}
+            onToggleBookmark={handleToggleBookmark}
+            onStartNavigation={handleStartNavigation}
+            onStopNavigation={handleStopNavigation}
+            onReviewDraftChange={setReviewDraft}
+            onSubmitReview={handleSubmitReview}
+          />
+        </section>
       </main>
 
       <MobileTabs

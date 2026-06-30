@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Bookmark, GraduationCap, LogIn, LogOut, MapPinPlus, Square, UserRound } from "lucide-react";
+import { Bookmark, Compass, LogIn, LogOut, MapPinPlus, Square, UserRound } from "lucide-react";
 
 export default function Header({
   user,
@@ -51,9 +51,9 @@ export default function Header({
     <header className="app-header">
       <div className="brand">
         <div className="brand-mark" aria-hidden="true">
-          <GraduationCap size={25} strokeWidth={2.2} />
+          <Compass size={25} strokeWidth={2.2} />
         </div>
-        <span>Student Services Map</span>
+        <span>Index 0 Student Map</span>
       </div>
 
       <div className="header-actions">

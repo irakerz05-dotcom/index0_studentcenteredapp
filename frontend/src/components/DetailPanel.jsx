@@ -1,11 +1,17 @@
+import { useState } from "react";
 import {
   Bookmark,
+  Building2,
   Clock,
   ExternalLink,
+  Flag,
+  ListChecks,
   Mail,
   MapPin,
+  MessageSquarePlus,
   Navigation,
   Phone,
+  ShieldCheck,
   Star,
   X,
 } from "lucide-react";
@@ -29,6 +35,13 @@ export default function DetailPanel({
   onReviewDraftChange,
   onSubmitReview,
 }) {
+  const [feedbackDraft, setFeedbackDraft] = useState({
+    type: "Incorrect information",
+    accuracy: "4",
+    message: "",
+  });
+  const [feedbackStatus, setFeedbackStatus] = useState("");
+
   if (!establishment) {
     return (
       <aside className="detail-panel empty-detail" aria-label="Establishment details">
@@ -42,9 +55,27 @@ export default function DetailPanel({
   }
 
   const rating = getDisplayRating(establishment, reviews);
+  const buildingName = establishment.building_name || establishment.building || establishment.address?.split(",")[0] || "Building to verify";
+  const availableServices = [
+    establishment.type,
+    establishment.displayCategory,
+    ...(establishment.description ? establishment.description.split(/[,.]/).slice(0, 2) : []),
+  ]
+    .map((service) => String(service || "").trim())
+    .filter(Boolean);
   const directionsUrl = userLocation
     ? `https://www.openstreetmap.org/directions?engine=fossgis_osrm_foot&route=${userLocation.latitude}%2C${userLocation.longitude}%3B${establishment.latitude}%2C${establishment.longitude}`
     : `https://www.openstreetmap.org/directions?to=${establishment.latitude}%2C${establishment.longitude}`;
+
+  function handleFeedbackSubmit(event) {
+    event.preventDefault();
+    setFeedbackStatus("Thanks. Your report is saved in this session for review workflow integration.");
+    setFeedbackDraft({
+      type: "Incorrect information",
+      accuracy: "4",
+      message: "",
+    });
+  }
 
   return (
     <aside className="detail-panel" aria-label={`${establishment.name} details`}>
@@ -79,11 +110,45 @@ export default function DetailPanel({
       </div>
 
       <div className="open-line">
+        <ShieldCheck size={17} />
         <strong className={establishment.availability_status === "Busy" ? "status-busy" : "status-open"}>
           {establishment.availability_status}
         </strong>
         <span>{establishment.closesAt}</span>
       </div>
+
+      <div className="detail-action-row">
+        <a className="directions-button" href={directionsUrl} target="_blank" rel="noreferrer">
+          <Navigation size={17} />
+          <span>Get Directions</span>
+        </a>
+        <button
+          className="secondary-detail-button"
+          type="button"
+          onClick={isNavigating ? onStopNavigation : onStartNavigation}
+        >
+          <Navigation size={16} />
+          <span>{isNavigating ? "Stop GPS" : "Start GPS"}</span>
+        </button>
+      </div>
+
+      <section className="info-grid" aria-label="Service quick information">
+        <article>
+          <Building2 size={17} />
+          <span>Building</span>
+          <strong>{buildingName}</strong>
+        </article>
+        <article>
+          <ListChecks size={17} />
+          <span>Category</span>
+          <strong>{establishment.displayCategory}</strong>
+        </article>
+        <article>
+          <Clock size={17} />
+          <span>Hours</span>
+          <strong>{establishment.operating_hours || "Hours not listed"}</strong>
+        </article>
+      </section>
 
       <section className="detail-section">
         <h2>Address</h2>
@@ -124,6 +189,15 @@ export default function DetailPanel({
         ) : null}
       </section>
 
+      <section className="detail-section">
+        <h2>Available Services</h2>
+        <div className="service-chip-list">
+          {availableServices.map((service) => (
+            <span key={service}>{service}</span>
+          ))}
+        </div>
+      </section>
+
       <section className="detail-section hours-grid">
         <h2>Hours</h2>
         <p>
@@ -140,6 +214,54 @@ export default function DetailPanel({
           <strong>{establishment.price_range === "$$" ? "Moderate" : "Affordable"}</strong>
         </p>
         <p className="description-copy">{establishment.description}</p>
+      </section>
+
+      <section className="feedback-section">
+        <div className="section-title-row">
+          <h2>Report Info</h2>
+          <Flag size={17} />
+        </div>
+        <form onSubmit={handleFeedbackSubmit}>
+          <label>
+            <span>Issue type</span>
+            <select
+              value={feedbackDraft.type}
+              onChange={(event) => setFeedbackDraft({ ...feedbackDraft, type: event.target.value })}
+            >
+              <option>Incorrect information</option>
+              <option>Suggest an update</option>
+              <option>Service unavailable</option>
+              <option>Location is wrong</option>
+            </select>
+          </label>
+          <label>
+            <span>Rate info accuracy</span>
+            <select
+              value={feedbackDraft.accuracy}
+              onChange={(event) => setFeedbackDraft({ ...feedbackDraft, accuracy: event.target.value })}
+            >
+              <option value="5">5 - Very accurate</option>
+              <option value="4">4 - Mostly accurate</option>
+              <option value="3">3 - Needs checking</option>
+              <option value="2">2 - Mostly wrong</option>
+              <option value="1">1 - Incorrect</option>
+            </select>
+          </label>
+          <label>
+            <span>Suggestion</span>
+            <textarea
+              value={feedbackDraft.message}
+              onChange={(event) => setFeedbackDraft({ ...feedbackDraft, message: event.target.value })}
+              placeholder="Tell us what should be corrected..."
+              rows={3}
+            />
+          </label>
+          <button className="submit-review" type="submit">
+            <MessageSquarePlus size={16} />
+            <span>Submit Feedback</span>
+          </button>
+          {feedbackStatus ? <p className="form-status">{feedbackStatus}</p> : null}
+        </form>
       </section>
 
       <section className="review-section">

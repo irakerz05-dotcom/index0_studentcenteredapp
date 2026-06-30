@@ -1,7 +1,7 @@
 services:
   - type: web
     name: student-services-map-api
-    env: python
+    runtime: python
     plan: free
     buildCommand: pip install -r backend/requirements.txt
     startCommand: gunicorn --chdir backend app:app
@@ -21,9 +21,8 @@ services:
 
   - type: web
     name: student-services-map-frontend
-    env: static
-    plan: free
-    buildCommand: cd frontend && pnpm install --frozen-lockfile && pnpm build
+    runtime: static
+    buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: frontend/dist
     envVars:
       - key: VITE_API_BASE_URL

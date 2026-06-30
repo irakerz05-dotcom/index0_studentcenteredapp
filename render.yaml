@@ -3,8 +3,9 @@ services:
     name: student-services-map-api
     runtime: python
     plan: free
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: gunicorn --chdir backend app:app
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
     envVars:
       - key: DB_HOST
         sync: false
@@ -22,8 +23,9 @@ services:
   - type: web
     name: student-services-map-frontend
     runtime: static
-    buildCommand: cd frontend && npm install && npm run build
-    staticPublishPath: frontend/dist
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
     envVars:
       - key: VITE_API_BASE_URL
         sync: false

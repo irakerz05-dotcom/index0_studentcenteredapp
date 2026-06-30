@@ -1,5 +1,6 @@
 import {
   Bookmark,
+  Clock3,
   Filter,
   Loader2,
   MapPin,
@@ -12,33 +13,62 @@ import { ServiceIcon } from "./serviceIcons.jsx";
 
 export default function SearchPanel({
   establishments,
+  allEstablishments,
   selectedStoreId,
   searchTerm,
+  suggestions,
   selectedCategory,
   openOnly,
   showingBookmarks,
   bookmarks,
   reviewsByStore,
+  recentStoreIds,
   isLoading,
   error,
   onSearchChange,
+  onSuggestionSelect,
   onCategoryChange,
   onOpenOnlyChange,
   onSelectStore,
 }) {
+  const recentlyViewed = recentStoreIds
+    .map((storeId) => allEstablishments.find((establishment) => establishment.store_id === storeId))
+    .filter(Boolean);
+
   return (
     <aside className="results-panel" aria-label="Service search and results">
-      <div className="search-row">
-        <Search className="search-icon" size={20} />
-        <input
-          value={searchTerm}
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Search printing, computer shops, study hubs..."
-          aria-label="Search services"
-        />
-        <button className="icon-button" type="button" aria-label="Open filters">
-          <SlidersHorizontal size={18} />
-        </button>
+      <div className="panel-kicker">
+        <span>Service Directory</span>
+        <strong>{allEstablishments.length}</strong>
+      </div>
+
+      <div className="search-shell">
+        <div className="search-row">
+          <Search className="search-icon" size={20} />
+          <input
+            value={searchTerm}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Search name, building, service, keyword..."
+            aria-label="Search services by name, building, service, or keyword"
+          />
+          <button className="icon-button" type="button" aria-label="Open filters">
+            <SlidersHorizontal size={18} />
+          </button>
+        </div>
+        {searchTerm && suggestions.length > 0 ? (
+          <div className="search-suggestions" role="listbox" aria-label="Search suggestions">
+            {suggestions.map((suggestion) => (
+              <button
+                key={suggestion.store_id}
+                type="button"
+                onClick={() => onSuggestionSelect(suggestion)}
+              >
+                <span>{suggestion.name}</span>
+                <small>{suggestion.address || suggestion.displayCategory}</small>
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       <div className="category-tabs" aria-label="Category filters">
@@ -66,18 +96,45 @@ export default function SearchPanel({
           <Filter size={16} />
           <span>Open now</span>
         </button>
-        <button type="button">
+        <button type="button" title="Price sorting will use verified price data when available">
           <span className="money-symbol">$</span>
           <span>Price</span>
         </button>
-        <button type="button">
+        <button type="button" title="Rating sorting uses loaded review data">
           <Star size={16} />
           <span>Rating</span>
         </button>
-        <button className="reset-button" type="button" onClick={() => onCategoryChange("All")}>
+        <button
+          className="reset-button"
+          type="button"
+          onClick={() => {
+            onCategoryChange("All");
+            onSearchChange("");
+          }}
+        >
           Reset
         </button>
       </div>
+
+      {!searchTerm && recentlyViewed.length > 0 ? (
+        <div className="recent-strip" aria-label="Recently viewed services">
+          <span>
+            <Clock3 size={14} />
+            Recently viewed
+          </span>
+          <div>
+            {recentlyViewed.slice(0, 3).map((establishment) => (
+              <button
+                key={establishment.store_id}
+                type="button"
+                onClick={() => onSelectStore(establishment.store_id)}
+              >
+                {establishment.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="results-meta">
         <span>{isLoading ? "Loading" : `${establishments.length} results`}</span>
@@ -86,10 +143,22 @@ export default function SearchPanel({
 
       <div className="results-list" aria-live="polite">
         {isLoading ? (
-          <div className="state-message">
-            <Loader2 className="spin" size={20} />
-            <span>Loading campus services...</span>
-          </div>
+          <>
+            <div className="state-message">
+              <Loader2 className="spin" size={20} />
+              <span>Loading campus services...</span>
+            </div>
+            {Array.from({ length: 4 }, (_, index) => (
+              <div className="result-card skeleton-card" key={index} aria-hidden="true">
+                <span className="skeleton-tile" />
+                <span className="skeleton-lines">
+                  <span />
+                  <span />
+                  <span />
+                </span>
+              </div>
+            ))}
+          </>
         ) : null}
 
         {!isLoading && error ? (
@@ -141,6 +210,7 @@ export default function SearchPanel({
                       {establishment.availability_status}
                     </span>
                   </span>
+                  <span className="result-address">{establishment.address || "Building to verify"}</span>
                 </span>
                 {isBookmarked ? <Bookmark className="card-bookmark" size={17} /> : null}
               </button>

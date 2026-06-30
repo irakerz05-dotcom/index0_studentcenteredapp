@@ -22,7 +22,7 @@ export default function HeroPanel({
           <Sparkles size={18} />
         </span>
         <div>
-          <h1 id="hero-title">Find student services around U-Belt</h1>
+          <h1 id="hero-title">Index 0 Student Services Map</h1>
           <p>
             Search printing shops, computer services, study spaces, dormitories, and campus help
             points from one fast student-focused map.

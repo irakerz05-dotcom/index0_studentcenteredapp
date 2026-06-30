@@ -1,11 +1,13 @@
 import { useRef } from "react";
-import { Bookmark, GraduationCap, LogIn, LogOut, MapPinPlus, UserRound } from "lucide-react";
+import { Bookmark, GraduationCap, LogIn, LogOut, MapPinPlus, Square, UserRound } from "lucide-react";
 
 export default function Header({
   user,
+  isNavigating,
   showingBookmarks,
   onToggleBookmarks,
   onAddPlace,
+  onStopNavigation,
   onLogin,
   onLogout,
 }) {
@@ -55,6 +57,17 @@ export default function Header({
       </div>
 
       <div className="header-actions">
+        {isNavigating ? (
+          <button
+            className="stop-gps-button"
+            type="button"
+            onPointerDown={handlePointerAction(onStopNavigation)}
+            onClick={handleClickAction(onStopNavigation)}
+          >
+            <Square size={16} fill="currentColor" />
+            <span>Stop GPS</span>
+          </button>
+        ) : null}
         <button
           className="add-place-button"
           type="button"

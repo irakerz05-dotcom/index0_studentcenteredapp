@@ -4,6 +4,7 @@ import {
   ExternalLink,
   Mail,
   MapPin,
+  Navigation,
   Phone,
   Star,
   X,
@@ -19,8 +20,12 @@ export default function DetailPanel({
   reviewStatus,
   userLocation,
   isAuthenticated,
+  isNavigating,
+  navigationStatus,
   onClose,
   onToggleBookmark,
+  onStartNavigation,
+  onStopNavigation,
   onReviewDraftChange,
   onSubmitReview,
 }) {
@@ -90,6 +95,15 @@ export default function DetailPanel({
           <ExternalLink size={16} />
           <span>{userLocation ? "Navigate from my location" : "Directions"}</span>
         </a>
+        <button
+          className="text-action route-button"
+          type="button"
+          onClick={isNavigating ? onStopNavigation : onStartNavigation}
+        >
+          <Navigation size={16} />
+          <span>{isNavigating ? "Stop GPS navigation" : "Start GPS navigation"}</span>
+        </button>
+        {navigationStatus ? <p className="route-note">{navigationStatus}</p> : null}
       </section>
 
       <section className="detail-section">

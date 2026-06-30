@@ -1,15 +1,67 @@
-import { MapPin, X } from "lucide-react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { useEffect } from "react";
+import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import L from "leaflet";
+import { Crosshair, MapPin, X } from "lucide-react";
+import { clampToUbelt, toLatLng, UBELT_LEAFLET_BOUNDS } from "../data/mapConfig.js";
 import { CATEGORY_DEFINITIONS } from "../data/serviceMetadata.js";
 
 const CATEGORIES = CATEGORY_DEFINITIONS.filter((category) => category.id !== "All");
 
+function createPickerIcon() {
+  const html = renderToStaticMarkup(
+    <div className="place-picker-marker">
+      <MapPin size={25} strokeWidth={2.4} />
+    </div>,
+  );
+
+  return L.divIcon({
+    html,
+    className: "place-picker-marker-shell",
+    iconSize: [42, 50],
+    iconAnchor: [21, 46],
+  });
+}
+
+function LocationPickerController({ location, onLocationChange }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      map.invalidateSize();
+      map.panTo(toLatLng(location), { animate: false });
+    }, 60);
+
+    return () => window.clearTimeout(timer);
+  }, [location, map]);
+
+  useMapEvents({
+    click(event) {
+      onLocationChange(
+        clampToUbelt({
+          latitude: event.latlng.lat,
+          longitude: event.latlng.lng,
+        }),
+      );
+    },
+  });
+
+  return null;
+}
+
 export default function AddPlacePanel({
   draft,
   status,
+  location,
+  userLocation,
   onDraftChange,
+  onLocationChange,
+  onUseUserLocation,
   onSubmit,
   onClose,
 }) {
+  const markerPosition = toLatLng(location);
+
   return (
     <div className="modal-backdrop" role="presentation">
       <section className="modal-panel add-place-panel" aria-label="Add service">
@@ -57,6 +109,56 @@ export default function AddPlacePanel({
               required
             />
           </label>
+
+          <div className="place-picker">
+            <div>
+              <strong>Map location</strong>
+              <span>Drag the pin or tap the map to mark the exact spot in U-Belt.</span>
+            </div>
+            <div className="place-picker-map">
+              <MapContainer
+                center={markerPosition}
+                zoom={17}
+                minZoom={15}
+                maxBounds={UBELT_LEAFLET_BOUNDS}
+                maxBoundsViscosity={0.9}
+                scrollWheelZoom
+                zoomControl={false}
+                className="place-picker-leaflet"
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <LocationPickerController location={location} onLocationChange={onLocationChange} />
+                <Marker
+                  draggable
+                  position={markerPosition}
+                  icon={createPickerIcon()}
+                  eventHandlers={{
+                    dragend: (event) => {
+                      const nextLocation = event.target.getLatLng();
+                      onLocationChange(
+                        clampToUbelt({
+                          latitude: nextLocation.lat,
+                          longitude: nextLocation.lng,
+                        }),
+                      );
+                    },
+                  }}
+                />
+              </MapContainer>
+            </div>
+            <button
+              className="secondary-action"
+              type="button"
+              onClick={onUseUserLocation}
+              disabled={!userLocation}
+            >
+              <Crosshair size={16} />
+              <span>{userLocation ? "Place pin at my GPS location" : "Use map pin above"}</span>
+            </button>
+          </div>
 
           <label>
             <span>Contact number</span>

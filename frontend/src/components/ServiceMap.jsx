@@ -1,12 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { useEffect } from "react";
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
-import { Crosshair, Minus, Navigation, Plus } from "lucide-react";
+import { Crosshair, Minus, Navigation, Plus, Route, X } from "lucide-react";
+import { toLatLng, UBELT_CENTER, UBELT_LEAFLET_BOUNDS } from "../data/mapConfig.js";
 import { getDisplayRating } from "../data/serviceMetadata.js";
 import { getServiceIcon } from "./serviceIcons.jsx";
-
-const CAMPUS_CENTER = [14.60345, 120.98975];
 
 function createMarkerIcon(establishment, selected) {
   const Icon = getServiceIcon(establishment.displayCategory);
@@ -39,6 +38,21 @@ function MapFocus({ selectedEstablishment }) {
       });
     }
   }, [map, selectedEstablishment]);
+
+  return null;
+}
+
+function RouteFocus({ route }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!route?.coordinates?.length) return;
+    map.fitBounds(route.coordinates, {
+      animate: true,
+      duration: 0.5,
+      padding: [42, 42],
+    });
+  }, [map, route]);
 
   return null;
 }
@@ -77,13 +91,53 @@ function MapControlButtons({ onLocateUser }) {
   );
 }
 
+function NavigationPanel({ route, status, onStopNavigation }) {
+  if (!route && !status) return null;
+
+  return (
+    <div className="navigation-panel" aria-live="polite">
+      <div className="navigation-panel-header">
+        <span>
+          <Route size={18} />
+          Navigation
+        </span>
+        {onStopNavigation ? (
+          <button type="button" aria-label="Stop navigation" onClick={onStopNavigation}>
+            <X size={17} />
+          </button>
+        ) : null}
+      </div>
+      {status ? <p className="navigation-status">{status}</p> : null}
+      {route ? (
+        <>
+          <p className="route-summary">
+            <strong>{route.distanceText}</strong>
+            <span>{route.durationText}</span>
+          </p>
+          <ol className="route-steps">
+            {route.steps.slice(0, 5).map((step) => (
+              <li key={step.id}>
+                <span>{step.instruction}</span>
+                {step.distance ? <small>{step.distance}</small> : null}
+              </li>
+            ))}
+          </ol>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 export default function ServiceMap({
   establishments,
   selectedStoreId,
   reviewsByStore,
   userLocation,
   locationStatus,
+  navigationRoute,
+  navigationStatus,
   onLocateUser,
+  onStopNavigation,
   onSelectStore,
 }) {
   const selectedEstablishment = establishments.find(
@@ -96,10 +150,12 @@ export default function ServiceMap({
         center={
           selectedEstablishment
             ? [selectedEstablishment.latitude, selectedEstablishment.longitude]
-            : CAMPUS_CENTER
+            : toLatLng(UBELT_CENTER)
         }
         zoom={17}
         minZoom={15}
+        maxBounds={UBELT_LEAFLET_BOUNDS}
+        maxBoundsViscosity={0.75}
         scrollWheelZoom
         zoomControl={false}
         className="leaflet-map"
@@ -109,6 +165,13 @@ export default function ServiceMap({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <MapFocus selectedEstablishment={selectedEstablishment} />
+        <RouteFocus route={navigationRoute} />
+        {navigationRoute?.coordinates?.length ? (
+          <Polyline
+            positions={navigationRoute.coordinates}
+            pathOptions={{ color: "#007c72", weight: 6, opacity: 0.82 }}
+          />
+        ) : null}
         {userLocation ? (
           <Marker position={[userLocation.latitude, userLocation.longitude]} icon={createUserIcon()}>
             <Popup>
@@ -142,6 +205,11 @@ export default function ServiceMap({
       </MapContainer>
 
       {locationStatus ? <div className="map-location-status">{locationStatus}</div> : null}
+      <NavigationPanel
+        route={navigationRoute}
+        status={navigationStatus}
+        onStopNavigation={onStopNavigation}
+      />
       <div className="scale-bar" aria-hidden="true">
         <span />
         100 m

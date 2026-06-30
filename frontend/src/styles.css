@@ -107,6 +107,8 @@ a {
 }
 
 .bookmark-filter,
+.add-place-button,
+.login-button,
 .profile-chip,
 .icon-button,
 .quick-filters button,
@@ -131,6 +133,27 @@ a {
   font-size: 14px;
 }
 
+.add-place-button,
+.login-button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  font-size: 13px;
+  font-weight: 750;
+  padding: 0 14px;
+}
+
+.login-button {
+  background: var(--surface);
+  color: var(--accent);
+}
+
 .bookmark-filter.is-active {
   color: var(--accent);
 }
@@ -140,6 +163,10 @@ a {
   align-items: center;
   gap: 10px;
   color: var(--text);
+}
+
+.profile-chip:hover {
+  color: var(--accent);
 }
 
 .profile-chip > svg {
@@ -572,6 +599,25 @@ a {
   background: var(--warning);
 }
 
+.user-marker-shell {
+  border: 0;
+  background: transparent;
+}
+
+.user-marker {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 3px solid white;
+  border-radius: 50%;
+  background: #0f62fe;
+  box-shadow:
+    0 0 0 8px rgba(15, 98, 254, 0.16),
+    0 9px 18px rgba(15, 23, 42, 0.24);
+  color: white;
+}
+
 .map-controls {
   position: absolute;
   right: 14px;
@@ -591,6 +637,23 @@ a {
   background: white;
   color: #111827;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.map-location-status {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  z-index: 500;
+  max-width: min(380px, calc(100% - 32px));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  color: #374151;
+  font-size: 13px;
+  font-weight: 650;
+  padding: 9px 12px;
+  transform: translateX(-50%);
 }
 
 .scale-bar {
@@ -863,6 +926,181 @@ a {
   font-size: 12px;
 }
 
+.form-note {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: #475467;
+  font-size: 12px;
+  line-height: 1.35;
+  padding: 9px 10px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.28);
+  padding: 18px;
+}
+
+.modal-panel {
+  position: relative;
+  display: grid;
+  width: min(440px, 100%);
+  max-height: min(760px, calc(100vh - 36px));
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  box-shadow: var(--shadow);
+  padding: 24px;
+}
+
+.add-place-panel {
+  width: min(560px, 100%);
+}
+
+.modal-close {
+  top: 12px;
+  right: 12px;
+}
+
+.modal-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding-right: 34px;
+}
+
+.modal-heading > svg {
+  color: var(--accent);
+}
+
+.modal-heading h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.modal-heading p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.stack-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.stack-form label {
+  display: grid;
+  gap: 7px;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.stack-form input,
+.stack-form select,
+.stack-form textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  color: var(--text);
+  font-size: 14px;
+  outline: 0;
+  padding: 11px 12px;
+}
+
+.stack-form textarea {
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.stack-form input:focus,
+.stack-form select:focus,
+.stack-form textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 124, 114, 0.12);
+}
+
+.input-with-icon {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: #475467;
+  padding-left: 12px;
+}
+
+.input-with-icon input {
+  border: 0;
+  box-shadow: none;
+}
+
+.input-with-icon:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 124, 114, 0.12);
+}
+
+.coordinate-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.primary-action,
+.secondary-action,
+.text-switch {
+  border: 0;
+  border-radius: 8px;
+  font-weight: 750;
+}
+
+.primary-action {
+  min-height: 42px;
+  background: var(--accent);
+  color: white;
+  padding: 0 16px;
+}
+
+.primary-action:disabled,
+.secondary-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.secondary-action {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: #374151;
+  padding: 0 12px;
+}
+
+.text-switch {
+  justify-self: center;
+  margin-top: 14px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 13px;
+}
+
 .empty-detail {
   display: grid;
   place-items: center;
@@ -937,9 +1175,19 @@ a {
   }
 
   .bookmark-filter span,
+  .add-place-button span,
+  .login-button span,
   .profile-chip div,
   .profile-chip > svg + div + svg {
     display: none;
+  }
+
+  .add-place-button,
+  .login-button {
+    width: 38px;
+    min-height: 38px;
+    border-radius: 8px;
+    padding: 0;
   }
 
   .profile-chip > svg {
@@ -1090,6 +1338,14 @@ a {
 
   .mobile-tabs button.is-active {
     color: var(--accent);
+  }
+
+  .modal-panel {
+    padding: 20px;
+  }
+
+  .coordinate-grid {
+    grid-template-columns: 1fr;
   }
 }
 

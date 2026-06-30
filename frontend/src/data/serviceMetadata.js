@@ -94,6 +94,19 @@ const FALLBACK_COORDINATES = [
   [14.60228, 120.98939],
 ];
 
+function formatDistanceMiles(value) {
+  const numericValue =
+    typeof value === "number"
+      ? value
+      : Number(String(value || "").replace(/[^0-9.]/g, ""));
+
+  if (!Number.isFinite(numericValue)) {
+    return "0.00 mi";
+  }
+
+  return `${numericValue.toFixed(2)} mi`;
+}
+
 export function getBackendTypeForCategory(categoryId) {
   return CATEGORY_DEFINITIONS.find((category) => category.id === categoryId)?.backendType || "";
 }
@@ -131,7 +144,7 @@ export function enhanceEstablishment(establishment, index = 0) {
     ...establishment,
     latitude: hasDatabaseCoordinates ? databaseLatitude : metadata.latitude ?? fallbackLatitude,
     longitude: hasDatabaseCoordinates ? databaseLongitude : metadata.longitude ?? fallbackLongitude,
-    distance: metadata.distance ?? `${Math.max(index + 1, 1) * 0.2} mi`,
+    distance: formatDistanceMiles(metadata.distance ?? Math.max(index + 1, 1) * 0.2),
     availability_status: databaseAvailability ?? metadata.availability_status ?? "Unknown",
     closesAt: metadata.closesAt ?? "Closes later today",
     email: establishment.email || metadata.email || "",

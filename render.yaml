@@ -25,7 +25,7 @@ services:
     runtime: static
     rootDir: frontend
     buildCommand: pnpm install --frozen-lockfile && pnpm run build
-    staticPublishPath: frontend/dist
+    staticPublishPath: dist
     envVars:
       - key: VITE_API_BASE_URL
         sync: false

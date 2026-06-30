@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Header from "./components/Header.jsx";
 import SearchPanel from "./components/SearchPanel.jsx";
 import ServiceMap from "./components/ServiceMap.jsx";
@@ -19,6 +19,11 @@ import {
   login,
   signup,
 } from "./services/api.js";
+import { getWalkingRoute } from "./services/routing.js";
+import {
+  clampToUbelt,
+  DEFAULT_SERVICE_LOCATION,
+} from "./data/mapConfig.js";
 import {
   enhanceEstablishment,
   getBackendTypeForCategory,
@@ -48,16 +53,25 @@ const EMPTY_PLACE_DRAFT = {
   description: "",
 };
 
-const UBELT_FALLBACK_LOCATION = {
-  latitude: 14.603056,
-  longitude: 120.985556,
-};
-
 function normalizeSearch(value) {
   return value.trim().toLowerCase();
 }
 
+function getLocationFromPosition(position) {
+  return clampToUbelt({
+    latitude: Number(position.coords.latitude.toFixed(7)),
+    longitude: Number(position.coords.longitude.toFixed(7)),
+  });
+}
+
+function formatAccuracy(position) {
+  const accuracy = Math.round(position.coords.accuracy || 0);
+  return accuracy > 0 ? `GPS active, accuracy about ${accuracy} m.` : "GPS active.";
+}
+
 export default function App() {
+  const navigationWatchRef = useRef(null);
+  const lastRouteUpdateRef = useRef(0);
   const [session, setSession] = useState(() => getSavedSession());
   const [establishments, setEstablishments] = useState([]);
   const [selectedStoreId, setSelectedStoreId] = useState(null);
@@ -76,8 +90,12 @@ export default function App() {
   const [showAddPlacePanel, setShowAddPlacePanel] = useState(false);
   const [placeDraft, setPlaceDraft] = useState(EMPTY_PLACE_DRAFT);
   const [placeStatus, setPlaceStatus] = useState("");
+  const [placeLocation, setPlaceLocation] = useState(DEFAULT_SERVICE_LOCATION);
   const [userLocation, setUserLocation] = useState(null);
   const [locationStatus, setLocationStatus] = useState("");
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [navigationRoute, setNavigationRoute] = useState(null);
+  const [navigationStatus, setNavigationStatus] = useState("");
   const [mobileView, setMobileView] = useState("map");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -267,11 +285,9 @@ export default function App() {
     setLocationStatus("Finding your location...");
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setUserLocation({
-          latitude: Number(position.coords.latitude.toFixed(7)),
-          longitude: Number(position.coords.longitude.toFixed(7)),
-        });
-        setLocationStatus("Location ready.");
+        const nextLocation = getLocationFromPosition(position);
+        setUserLocation(nextLocation);
+        setLocationStatus(formatAccuracy(position));
       },
       () => {
         setLocationStatus("Allow location access to use GPS navigation.");
@@ -289,8 +305,9 @@ export default function App() {
     }
 
     setPlaceStatus("");
+    setPlaceLocation(userLocation || DEFAULT_SERVICE_LOCATION);
     setShowAddPlacePanel(true);
-  }, [session]);
+  }, [session, userLocation]);
 
   const handleSubmitPlace = useCallback(
     async (event) => {
@@ -298,11 +315,11 @@ export default function App() {
       setPlaceStatus("saving");
 
       try {
-        const placeLocation = userLocation || UBELT_FALLBACK_LOCATION;
+        const nextPlaceLocation = clampToUbelt(placeLocation);
         const created = await createEstablishment({
           ...placeDraft,
-          latitude: placeLocation.latitude,
-          longitude: placeLocation.longitude,
+          latitude: nextPlaceLocation.latitude,
+          longitude: nextPlaceLocation.longitude,
         });
         const enhanced = enhanceEstablishment(created, establishments.length);
         setEstablishments((current) => sortForStudentMap([...current, enhanced]));
@@ -315,7 +332,7 @@ export default function App() {
         setPlaceStatus(placeError.message);
       }
     },
-    [establishments.length, placeDraft, userLocation],
+    [establishments.length, placeDraft, placeLocation],
   );
 
   const handleSubmitReview = useCallback(
@@ -369,6 +386,90 @@ export default function App() {
     ? reviewsByStore[selectedEstablishment.store_id] || []
     : [];
 
+  const stopNavigationWatch = useCallback(() => {
+    if (navigationWatchRef.current !== null) {
+      navigator.geolocation.clearWatch(navigationWatchRef.current);
+      navigationWatchRef.current = null;
+    }
+  }, []);
+
+  const handleStopNavigation = useCallback(() => {
+    stopNavigationWatch();
+    setIsNavigating(false);
+    setNavigationRoute(null);
+    setNavigationStatus("");
+    setLocationStatus("Navigation stopped.");
+  }, [stopNavigationWatch]);
+
+  const buildRouteFromLocation = useCallback(
+    async (origin) => {
+      if (!selectedEstablishment) return;
+      lastRouteUpdateRef.current = Date.now();
+      setNavigationStatus("Building route...");
+      const route = await getWalkingRoute(origin, {
+        latitude: selectedEstablishment.latitude,
+        longitude: selectedEstablishment.longitude,
+      });
+      setNavigationRoute(route);
+      setNavigationStatus(
+        route.provider === "fallback"
+          ? "Route service is unavailable. Showing a basic direction line."
+          : "Follow the steps below. Stay aware of your surroundings.",
+      );
+    },
+    [selectedEstablishment],
+  );
+
+  const handleStartNavigation = useCallback(() => {
+    if (!selectedEstablishment) {
+      setNavigationStatus("Select a service first.");
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setNavigationStatus("GPS is not available in this browser.");
+      return;
+    }
+
+    setMobileView("map");
+    setIsNavigating(true);
+    setNavigationStatus("Finding your GPS location...");
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const nextLocation = getLocationFromPosition(position);
+        setUserLocation(nextLocation);
+        setLocationStatus(formatAccuracy(position));
+        await buildRouteFromLocation(nextLocation);
+
+        stopNavigationWatch();
+        navigationWatchRef.current = navigator.geolocation.watchPosition(
+          (watchPosition) => {
+            const watchedLocation = getLocationFromPosition(watchPosition);
+            setUserLocation(watchedLocation);
+            setLocationStatus(formatAccuracy(watchPosition));
+            if (Date.now() - lastRouteUpdateRef.current > 15000) {
+              buildRouteFromLocation(watchedLocation);
+            }
+          },
+          () => {
+            setNavigationStatus("GPS tracking paused. Allow location access to continue navigation.");
+          },
+          { enableHighAccuracy: true, timeout: 12000, maximumAge: 8000 },
+        );
+      },
+      () => {
+        setIsNavigating(false);
+        setNavigationStatus("Allow location access to start navigation.");
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 5000 },
+    );
+  }, [buildRouteFromLocation, selectedEstablishment, stopNavigationWatch]);
+
+  useEffect(() => {
+    return () => stopNavigationWatch();
+  }, [stopNavigationWatch]);
+
   return (
     <div className="app-shell">
       <Header
@@ -411,7 +512,10 @@ export default function App() {
           reviewsByStore={reviewsByStore}
           userLocation={userLocation}
           locationStatus={locationStatus}
+          navigationRoute={navigationRoute}
+          navigationStatus={navigationStatus}
           onLocateUser={handleLocateUser}
+          onStopNavigation={isNavigating ? handleStopNavigation : undefined}
           onSelectStore={handleSelectStore}
         />
 
@@ -423,8 +527,12 @@ export default function App() {
           reviewStatus={reviewStatus}
           userLocation={userLocation}
           isAuthenticated={Boolean(session?.token)}
+          isNavigating={isNavigating}
+          navigationStatus={navigationStatus}
           onClose={() => setMobileView("map")}
           onToggleBookmark={handleToggleBookmark}
+          onStartNavigation={handleStartNavigation}
+          onStopNavigation={handleStopNavigation}
           onReviewDraftChange={setReviewDraft}
           onSubmitReview={handleSubmitReview}
         />
@@ -455,7 +563,15 @@ export default function App() {
         <AddPlacePanel
           draft={placeDraft}
           status={placeStatus}
+          location={placeLocation}
+          userLocation={userLocation}
           onDraftChange={setPlaceDraft}
+          onLocationChange={(location) => setPlaceLocation(clampToUbelt(location))}
+          onUseUserLocation={() => {
+            if (userLocation) {
+              setPlaceLocation(clampToUbelt(userLocation));
+            }
+          }}
           onSubmit={handleSubmitPlace}
           onClose={() => setShowAddPlacePanel(false)}
         />

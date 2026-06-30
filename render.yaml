@@ -17,6 +17,10 @@ services:
         sync: false
       - key: DB_PASSWORD
         sync: false
+      - key: DB_SSLMODE
+        value: require
+      - key: SECRET_KEY
+        generateValue: true
       - key: CORS_ORIGINS
         sync: false
 
@@ -24,7 +28,7 @@ services:
     name: student-services-map-frontend
     runtime: static
     rootDir: frontend
-    buildCommand: pnpm install --frozen-lockfile && pnpm run build
+    buildCommand: pnpm install --frozen-lockfile && pnpm build
     staticPublishPath: dist
     envVars:
       - key: VITE_API_BASE_URL
